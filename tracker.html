@@ -1,0 +1,103 @@
+<head>
+  <title>Demo of Tracker</title>
+  <!-- Tracker -->
+  <script type="text/javascript" src="tracker.js"></script>
+  <!-- Tracker data-structures -->
+  <script type="text/javascript" src="reactive-array.js"></script>
+  <script type="text/javascript" src="reactive-var.js"></script>
+  <script type="text/javascript" src="reactive-dict.js"></script>
+
+
+  <!-- Rendering libs -->
+  <script type="text/javascript" src="react-with-addons.min.js"></script>
+  <script type="text/javascript" src="chart.min.js"></script>
+</head>
+
+<body>
+  <div>
+    <p>Today is a beautiful day. Today is <span id="day">Saturday</span>.</p>
+    <p>The forecast for today is <span id="forecast">44</span> degrees Celsius!</p>
+  </div>
+
+  <div id="react-mount">
+  </div>
+
+  <canvas id="chartjs-mount" width="250" height="250"></canvas>
+
+  <script type="text/javascript">
+    var daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    var temperatures = new ReactiveArray([25, 31, 30, 32, 31, 27, 19]);
+    var currentDate = new ReactiveVar(new Date);
+
+    document.addEventListener("DOMContentLoaded", function () {
+      // Manual DOM manipulations
+      Tracker.autorun(function () {
+        var date = currentDate.get();
+        document.getElementById("day").innerText = daysOfWeek[date.getDay()];
+        document.getElementById("forecast").innerText = temperatures.get(date.getDay());
+      });
+
+      // React.js example
+      Tracker.autorun(function () {
+        React.render(React.createElement(OrderedList, { data: temperatures.toArray() }),
+                     document.getElementById("react-mount"));
+      });
+
+
+      // Chart.js example
+      var ctx = document.getElementById("chartjs-mount").getContext("2d");
+      var temperatureChart;
+
+      Tracker.autorun(function () {
+        // Initialize the chart if it is first time rendering
+        if (! temperatureChart)
+          temperatureChart = new Chart(ctx).Line(chartOptions);
+
+        // Set the data for the chart
+        for (var i = 0; i < temperatures.length(); i++)
+        temperatureChart.datasets[0].points[i].value = temperatures.get(i);
+        temperatureChart.update();
+      });
+    });
+
+    // Other
+    // Randomly simulate getting new data from the weather forecast server.
+    var maxDelta = 20;
+    var randomlyUpdateForecast = function () {
+      var day = Math.floor(Math.random() * 7);
+      var delta = Math.floor(Math.random() * (maxDelta * 2 + 1)) - maxDelta;
+      temperatures.set(day, temperatures.get(day) + delta);
+    };
+    var randomlyChangeDate = function () {
+      currentDate.set(new Date(2014, 11, Math.floor(Math.random() * 30 + 1)));
+    };
+
+    // Supporting code, not important for the demo
+    var chartOptions = {
+      labels: daysOfWeek,
+      datasets: [{
+        label: "Forecast",
+        fillColor: "rgba(220,220,220,0.2)",
+        strokeColor: "rgba(220,220,220,1)",
+        pointColor: "rgba(220,220,220,1)",
+        pointStrokeColor: "#fff",
+        pointHighlightFill: "#fff",
+        pointHighlightStroke: "rgba(220,220,220,1)",
+        data: new Array(7)
+      }]
+    };
+
+    var OrderedList = React.createClass({
+      render: function() {
+        var liElements = this.props.data.map(function (temp, index) {
+          return React.DOM.li(null, daysOfWeek[index] + ": " + temp + "C");
+        });
+        return React.DOM.div(null, [
+          React.DOM.p(null, "Temperature forecast for the week"),
+          React.DOM.ol(null, liElements)
+        ]);
+      }
+    });
+  </script>
+</body>
+
